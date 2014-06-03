@@ -1,7 +1,7 @@
 try:
-    from queue import Queue
+    from queue import Queue, Empty
 except ImportError:
-    from Queue import Queue
+    from Queue import Queue, Empty
 from multiprocessing import Process
 import logging
 
@@ -28,26 +28,31 @@ def processed(items, func, max_processes=5, max_queue=200, join=True,
         operating system so that the program will terminate even if
         they are still running.
     """
-    queue = Queue(maxsize=max_queue)
+    input_queue = Queue(maxsize=max_queue)
+    output_queue = Queue(maxsize=max_queue)
     for item in items:
-        queue.put(item, True)
+        input_queue.put(item, True)
 
-    processes = []
-    while not queue.empty():
-        while sum(1 for process in processes if process.is_alive()) >= max_processes:
-            pass
+    def wrapped_func(output_queue, item):
         try:
-            item = queue.get(True)
-            processes.append(Process(target=func, args = (item,), daemon = daemon))
-            processes[-1].start()
-        except Exception as e:
-            log.exception(e)
+            func(item)
         except KeyboardInterrupt:
             raise
-        except:
+        except Exception as e:
+            output_queue.put(e)
+
+    processes = []
+    while not input_queue.empty():
+        try:
+            log.exception(output_queue.get_nowait())
+        except Empty:
             pass
-        finally:
-            queue.task_done()
+        while sum(1 for process in processes if process.is_alive()) >= max_processes:
+            pass
+        item = input_queue.get(True)
+        processes.append(Process(target=wrapped_func, args = (output_queue, item,), daemon = daemon))
+        processes[-1].start()
+        input_queue.task_done()
 
     if join:
         while any(process.is_alive() for process in processes):

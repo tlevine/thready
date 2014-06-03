@@ -18,6 +18,6 @@ def test_processed():
 
 def test_error():
     import processy
-#   def f(i):
-#       raise ValueError
-#   processy.processed(range(10), f)
+    def f(i):
+        raise ValueError
+    processy.processed(range(10), f)
