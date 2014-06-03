@@ -11,7 +11,7 @@ setup(
     author_email='friedrich@pudo.org',
     url='http://github.com/pudo/thready',
     license='MIT',
-    py_modules=['thready'],
+    py_modules=['thready', 'processy'],
     zip_safe=False,
     install_requires=[
     ],
